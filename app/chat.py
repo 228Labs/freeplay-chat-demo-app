@@ -1,5 +1,6 @@
 from freeplay import Freeplay, RecordPayload, CallInfo, ResponseInfo, SessionInfo, CallInfo
 import openai
+from anthropic import Anthropic
 from vectorSearch import vector_search
 from dotenv import load_dotenv
 import os
@@ -12,6 +13,11 @@ freeplay_key = os.getenv("FREEPLAY_KEY")
 freeplay_url = os.getenv("FREEPLAY_URL")
 freeplay_project_id = os.getenv("FREEPLAY_PROJECT_ID")
 openai_key = os.getenv("OPENAI_API_KEY")
+anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+# create the anthropic client
+anthropicClient = Anthropic(
+    api_key=anthropic_key,
+)
 
 # configure top k
 top_k = 5
@@ -61,19 +67,34 @@ def getCompletion(message, session, history, tag=["docs", "blogs"], title=None):
     #print(json.dumps(prompt_vars, indent=2))
 
     # run the completion
-    chat_completion = openai.chat.completions.create(
-        model=formatted_prompt.prompt_info.model,
-        messages = formatted_prompt.messages,
-        **formatted_prompt.prompt_info.model_parameters
-    )
+    if formatted_prompt.prompt_info.provider == "openai":
+        chat_completion = openai.chat.completions.create(
+            model=formatted_prompt.prompt_info.model,
+            messages = formatted_prompt.messages,
+            **formatted_prompt.prompt_info.model_parameters
+        )
+        content = chat_completion.choices[0].message.content
+        # update messages
+        messages = formatted_prompt.all_messages(
+            {'role': chat_completion.choices[0].message.role,
+            'content': content}
+        )
+    elif formatted_prompt.prompt_info.provider == "anthropic":
+        chat_completion = anthropicClient.messages.create(
+            model=formatted_prompt.prompt_info.model,
+            system=formatted_prompt.system_content,
+            messages=formatted_prompt.llm_prompt,
+            **formatted_prompt.prompt_info.model_parameters
+        )
+        content = chat_completion.content[0].text
+        messages = formatted_prompt.all_messages(
+            {'role': chat_completion.role,
+             'content': content}
+        )
+    else:
+        raise ValueError(f"Invalid provider: {formatted_prompt.provider}")
     # log latency
     end = time.time()
-
-    # update messages
-    messages = formatted_prompt.all_messages(
-        {'role': chat_completion.choices[0].message.role,
-         'content': chat_completion.choices[0].message.content}
-    )
 
     # create an async record call payload
     record_payload = RecordPayload(
@@ -83,7 +104,7 @@ def getCompletion(message, session, history, tag=["docs", "blogs"], title=None):
         prompt_info=formatted_prompt.prompt_info,
         call_info=CallInfo.from_prompt_info(formatted_prompt.prompt_info, start_time=start, end_time=end),
         response_info=ResponseInfo(
-            is_complete=chat_completion.choices[0].finish_reason == "stop"
+            is_complete=True
         )
     )
     # record the call
@@ -96,7 +117,7 @@ def getCompletion(message, session, history, tag=["docs", "blogs"], title=None):
         feedback={"search_filter": json.dumps(filter)}
     )
 
-    return chat_completion.choices[0].message.content, completion_id
+    return content, completion_id
 
 
 def record_customer_feedback(completion_id, feedback):
