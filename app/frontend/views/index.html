@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freeplay Chat</title>
+    <link rel="stylesheet" href="../public/style.css">
+</head>
+<body>
+    <div id="chatbox">
+        <h1 style="font-size: 36px; font-weight: bold; text-align: center; margin-top: 20px;">Freeplay Chat</h1>
+        <div id="messages">
+            <div class="message sys-msg">Welcome to Freeplay Chat! What can I help you with today?</div>
+        </div>
+        <div id="buttonsContainer" style="display: flex;">
+            <button id="thumbsUpButton" style="display: none;">👍</button>
+            <button id="thumbsDownButton" style="display: none;">👎</button>
+        </div>
+        <input type="text" id="userInput" placeholder="Send a message">
+        <button id="sendButton">Send</button>
+    </div>
+    <script type="module" src="../public/chat.js"></script>
+</body>
+</html>

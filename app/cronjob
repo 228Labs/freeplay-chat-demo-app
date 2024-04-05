@@ -1,0 +1,2 @@
+0 * * * * cd /usr/src/app/ && /usr/local/bin/python3 sessionPumpinator.py >> /var/log/cron.log 2>&1
+
